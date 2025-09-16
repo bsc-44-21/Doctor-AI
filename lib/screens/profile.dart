@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:country_flags/country_flags.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -14,10 +15,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   File? _profileImage;
   final ImagePicker _picker = ImagePicker();
 
-  // Editable user info
-  String name = "Farmer John";
-  String email = "farmer.john@example.com";
-  String phone = "+265 999 123 456";
+  // Editable user info (defaults)
+  String name = "Unknown Farmer";
+  String email = "not available";
+  String phone = "";
   String location = "Malawi";
 
   final _formKey = GlobalKey<FormState>();
@@ -31,6 +32,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
+    _loadUser();
+  }
+
+  void _loadUser() {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user != null) {
+      setState(() {
+        name = user.userMetadata?['full_name'] ?? "Farmer";
+        email = user.email ?? "No email";
+        phone = user.userMetadata?['phone'] ?? "";
+        location = user.userMetadata?['location'] ?? "Malawi";
+      });
+    }
+
     _nameController.text = name;
     _emailController.text = email;
     _phoneController.text = phone;
@@ -52,7 +67,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
   }
 
-  void _saveProfile() {
+  Future<void> _saveProfile() async {
     if (_formKey.currentState!.validate()) {
       setState(() {
         name = _nameController.text;
@@ -62,9 +77,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _isEditing = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Profile updated successfully!")),
-      );
+      // Save updates to Supabase metadata
+      try {
+        await Supabase.instance.client.auth.updateUser(
+          UserAttributes(
+            data: {
+              'full_name': name,
+              'phone': phone,
+              'location': location,
+            },
+          ),
+        );
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("✅ Profile updated successfully!")),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("❌ Error: $e")),
+        );
+      }
+    }
+  }
+
+  Future<void> _logout() async {
+    await Supabase.instance.client.auth.signOut();
+    if (mounted) {
+      Navigator.pushReplacementNamed(context, '/signIn');
     }
   }
 
@@ -127,27 +166,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     controller: _nameController,
                     enabled: _isEditing,
                     decoration: const InputDecoration(labelText: "Full Name"),
-                    validator: (value) => value == null || value.isEmpty
-                        ? "Enter your name"
-                        : null,
                   ),
                   const SizedBox(height: 10),
                   TextFormField(
                     controller: _emailController,
-                    enabled: _isEditing,
+                    enabled: false, // Email can’t be changed
                     decoration: const InputDecoration(labelText: "Email"),
-                    validator: (value) => value == null || value.isEmpty
-                        ? "Enter your email"
-                        : null,
                   ),
                   const SizedBox(height: 10),
                   TextFormField(
                     controller: _phoneController,
                     enabled: _isEditing,
                     decoration: const InputDecoration(labelText: "Phone"),
-                    validator: (value) => value == null || value.isEmpty
-                        ? "Enter your phone"
-                        : null,
                   ),
                   const SizedBox(height: 10),
 
@@ -156,9 +186,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     children: [
                       ClipRRect(
                         borderRadius: BorderRadius.circular(4),
-                        child: CountryFlag.fromCountryCode(
-                          'MW', // Malawi ISO code
-                        ),
+                        child: CountryFlag.fromCountryCode('MW'),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
@@ -167,9 +195,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           enabled: _isEditing,
                           decoration:
                               const InputDecoration(labelText: "Location"),
-                          validator: (value) => value == null || value.isEmpty
-                              ? "Enter your location"
-                              : null,
                         ),
                       ),
                     ],
@@ -182,17 +207,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             // Logout button
             ElevatedButton.icon(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Logged out")),
-                );
-              },
+              onPressed: _logout,
               icon: const Icon(Icons.logout),
               label: const Text("Logout"),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green,
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                  borderRadius: BorderRadius.circular(12),
+                ),
                 padding:
                     const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
               ),

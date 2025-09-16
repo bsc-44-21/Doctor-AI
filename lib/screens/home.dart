@@ -1,3 +1,7 @@
+import 'package:doctor_ai/screens/chatbot.dart';
+import 'package:doctor_ai/screens/knowledge.dart';
+import 'package:doctor_ai/screens/profile.dart';
+import 'package:doctor_ai/screens/scan.dart';
 import 'package:flutter/material.dart';
 import 'package:curved_navigation_bar/curved_navigation_bar.dart';
 
@@ -19,6 +23,12 @@ class _HomeScreenState extends State<HomeScreen> {
     const ProfileScreen(),
   ];
 
+  void _navigateTo(int index) {
+    setState(() {
+      _currentIndex = index;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -37,11 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Icon(Icons.chat, size: 30, color: Colors.white),
           Icon(Icons.person, size: 30, color: Colors.white),
         ],
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
+        onTap: (index) => _navigateTo(index),
       ),
     );
   }
@@ -53,6 +59,8 @@ class DashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final parentState = context.findAncestorStateOfType<_HomeScreenState>();
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
       child: Column(
@@ -60,25 +68,22 @@ class DashboardScreen extends StatelessWidget {
         children: [
           // Top Row: Logo + App Name
           Padding(
-            padding: const EdgeInsets.only(top: 32.0, bottom: 12.0),
+            padding: const EdgeInsets.only(top: 48.0, bottom: 16.0),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 InkWell(
                   onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                          builder: (context) => const ProfileScreen()),
-                    );
+                    parentState?._navigateTo(4); // Go to Profile tab
                   },
                   child: CircleAvatar(
-                    radius: 30,
+                    radius: 28,
                     backgroundColor: Colors.green.shade700,
-                    child:
-                        Icon(Icons.agriculture, size: 40, color: Colors.white),
+                    child: const Icon(Icons.agriculture,
+                        size: 34, color: Colors.white),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
                 const Text(
                   "Doctor AI👨‍🌾",
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
@@ -111,11 +116,23 @@ class DashboardScreen extends StatelessWidget {
               crossAxisCount: 2,
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
-              children: const [
-                _QuickTile(icon: Icons.camera_alt, title: "Scan Leaf"),
-                _QuickTile(icon: Icons.chat, title: "Chatbot"),
-                _QuickTile(icon: Icons.menu_book, title: "Knowledge"),
-                _QuickTile(icon: Icons.person, title: "Profile"),
+              children: [
+                _QuickTile(
+                    icon: Icons.camera_alt,
+                    title: "Scan Leaf",
+                    onTap: () => parentState?._navigateTo(1)),
+                _QuickTile(
+                    icon: Icons.chat,
+                    title: "Chatbot",
+                    onTap: () => parentState?._navigateTo(3)),
+                _QuickTile(
+                    icon: Icons.menu_book,
+                    title: "Knowledge",
+                    onTap: () => parentState?._navigateTo(2)),
+                _QuickTile(
+                    icon: Icons.person,
+                    title: "Profile",
+                    onTap: () => parentState?._navigateTo(4)),
               ],
             ),
           ),
@@ -125,49 +142,14 @@ class DashboardScreen extends StatelessWidget {
   }
 }
 
-/// ------------------- SCREENS FOR EACH TAB -------------------
-class ScanScreen extends StatelessWidget {
-  const ScanScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(child: Text("Scan Screen"));
-  }
-}
-
-class KnowledgeScreen extends StatelessWidget {
-  const KnowledgeScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(child: Text("Knowledge Screen"));
-  }
-}
-
-class ChatbotScreen extends StatelessWidget {
-  const ChatbotScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(child: Text("Chatbot Screen"));
-  }
-}
-
-class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Center(child: Text("Profile Screen"));
-  }
-}
-
 /// ------------------- QUICK TILE WIDGET -------------------
 class _QuickTile extends StatelessWidget {
   final IconData icon;
   final String title;
+  final VoidCallback onTap;
 
-  const _QuickTile({required this.icon, required this.title});
+  const _QuickTile(
+      {required this.icon, required this.title, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -176,17 +158,7 @@ class _QuickTile extends StatelessWidget {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () {
-          if (title == 'Scan Leaf') {
-            Navigator.of(context).pushNamed('/scan');
-          } else if (title == 'Chatbot') {
-            Navigator.of(context).pushNamed('/chatbot');
-          } else if (title == 'Knowledge') {
-            Navigator.of(context).pushNamed('/knowledge');
-          } else if (title == 'Profile') {
-            Navigator.of(context).pushNamed('/profile');
-          }
-        },
+        onTap: onTap,
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(

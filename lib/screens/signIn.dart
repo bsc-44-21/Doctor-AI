@@ -1,6 +1,7 @@
 import 'package:doctor_ai/screens/signUp.dart';
 import 'package:flutter/material.dart';
-import 'package:doctor_ai/screens/home.dart'; // Import the real HomeScreen
+import 'package:doctor_ai/screens/home.dart'; // Real HomeScreen
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SignInScreen extends StatefulWidget {
   const SignInScreen({super.key});
@@ -12,33 +13,60 @@ class SignInScreen extends StatefulWidget {
 class _SignInScreenState extends State<SignInScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _isLoading = false;
 
-  void _navigateToHome() {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const HomeScreen()),
-    );
+  Future<void> _signIn() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please enter email and password")),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final res = await Supabase.instance.client.auth.signInWithPassword(
+        email: email,
+        password: password,
+      );
+
+      if (res.user != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Signed in successfully!")),
+        );
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Sign in failed")),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: $e")),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
-  void _signIn() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Signed in successfully (frontend only)")),
-    );
-    _navigateToHome();
-  }
-
+  // Optional: social sign-ins can remain frontend-only for now
   void _signInWithGoogle() {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Google Sign-in (frontend only)")),
     );
-    _navigateToHome();
   }
 
   void _signInWithFacebook() {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Facebook Sign-in (frontend only)")),
     );
-    _navigateToHome();
   }
 
   @override
@@ -51,8 +79,6 @@ class _SignInScreenState extends State<SignInScreen> {
           child: Column(
             children: [
               const SizedBox(height: 40),
-
-              // Logo
               CircleAvatar(
                 radius: 60,
                 backgroundColor: Colors.white,
@@ -63,7 +89,6 @@ class _SignInScreenState extends State<SignInScreen> {
                 ),
               ),
               const SizedBox(height: 20),
-
               const Text(
                 "Sign In",
                 style: TextStyle(
@@ -129,7 +154,7 @@ class _SignInScreenState extends State<SignInScreen> {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: _signIn,
+                  onPressed: _isLoading ? null : _signIn,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
                     foregroundColor: Colors.green.shade700,
@@ -137,10 +162,15 @@ class _SignInScreenState extends State<SignInScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text(
-                    "Sign In",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
+                  child: _isLoading
+                      ? const CircularProgressIndicator(
+                          color: Colors.green,
+                        )
+                      : const Text(
+                          "Sign In",
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
                 ),
               ),
               const SizedBox(height: 20),
@@ -161,7 +191,7 @@ class _SignInScreenState extends State<SignInScreen> {
               ),
               const SizedBox(height: 20),
 
-              // Social Buttons with emojis
+              // Social Buttons
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [

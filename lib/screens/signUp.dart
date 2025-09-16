@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:doctor_ai/screens/signIn.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -14,20 +15,56 @@ class _SignUpScreenState extends State<SignUpScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   String _phoneNumber = "+265";
+  bool _isLoading = false;
 
-  void _signUp() {
-    // 🔥 Frontend only
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Account created successfully (frontend only)"),
-      ),
-    );
+  Future<void> _signUp() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+    final name = _nameController.text.trim();
+    final phone = _phoneNumber;
 
-    // Navigate back to Sign In screen
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const SignInScreen()),
-    );
+    if (email.isEmpty || password.isEmpty || name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please fill all fields")),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      // Supabase sign up
+      final res = await Supabase.instance.client.auth.signUp(
+        email: email,
+        password: password,
+        data: {
+          'name': name,
+          'phone': phone,
+        },
+      );
+
+      if (res.user != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Account created successfully!")),
+        );
+
+        // Redirect to Sign In screen
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const SignInScreen()),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Sign up failed")),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error: $e")),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -162,7 +199,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: _signUp,
+                  onPressed: _isLoading ? null : _signUp,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
                     foregroundColor: Colors.green.shade700,
@@ -170,10 +207,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text(
-                    "Create Account",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
+                  child: _isLoading
+                      ? const CircularProgressIndicator(
+                          color: Colors.green,
+                        )
+                      : const Text(
+                          "Create Account",
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold),
+                        ),
                 ),
               ),
               const SizedBox(height: 20),
@@ -199,55 +241,3 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 }
-
-
-
-
-
-
- // // Social Buttons
-              // Row(
-              //   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              //   children: [
-              //     ElevatedButton.icon(
-              //       onPressed: _signInWithGithub,
-              //       icon: Image.asset(
-              //         "assests/images/google.png",
-              //         width: 30,
-              //         height: 30,
-              //       ),
-              //       label: const Text("Google"),
-              //       style: ElevatedButton.styleFrom(
-              //         backgroundColor: Colors.white,
-              //         foregroundColor: Colors.green.shade700,
-              //         padding: const EdgeInsets.symmetric(
-              //           vertical: 12,
-              //           horizontal: 20,
-              //         ),
-              //         shape: RoundedRectangleBorder(
-              //           borderRadius: BorderRadius.circular(12),
-              //         ),
-              //       ),
-              //     ),
-              //     ElevatedButton.icon(
-              //       onPressed: _signInWithFacebook,
-              //       icon: Image.asset(
-              //         "assets/images/facebook.png",
-              //         width: 28,
-              //         height: 28,
-              //       ),
-              //       label: const Text("Facebook"),
-              //       style: ElevatedButton.styleFrom(
-              //         backgroundColor: Colors.white,
-              //         foregroundColor: Colors.green.shade700,
-              //         padding: const EdgeInsets.symmetric(
-              //           vertical: 12,
-              //           horizontal: 20,
-              //         ),
-              //         shape: RoundedRectangleBorder(
-              //           borderRadius: BorderRadius.circular(12),
-              //         ),
-              //       ),
-              //     ),
-              //   ],
-              // ),
